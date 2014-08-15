@@ -1,0 +1,112 @@
+#!/usr/bin/env python
+# vim:fileencoding=utf-8
+
+import httplib
+import json
+import re
+import urlparse
+
+from ansible.module_utils.basic import *  # noqa
+
+DOCUMENTATION = """
+---
+module: tory_remove_host
+description:
+- remove a given host from tory
+short_description: remove a given host from tory
+options:
+  hostname:
+    description:
+    - name of the host to remove
+    required: true
+    default: null
+  auth_token:
+    description:
+    - tory server auth token (may be given as $TORY_AUTH_TOKEN)
+    required: false
+    default: swordfish
+  tory_server:
+    description:
+    - tory server host and path (may be given as $TORY_SERVER)
+    required: false
+    default: 'http://localhost:9462/ansible/hosts'
+"""
+EXAMPLES = """
+---
+- name: remove this host from tory
+  delegate_to: 127.0.0.1
+  sudo: false
+  tory_remove_host:
+    hostname={{ ansible_fqdn }}
+"""
+
+HOSTNAME_RE = re.compile(
+    "^(([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\\-]*" +
+    "[a-zA-Z0-9])\\.)*([A-Za-z0-9]|[A-Za-z0-9][A-Za-z0-9\\-]*[A-Za-z0-9])$"
+)
+
+
+def main():
+    module = ToryRemoveHostModule(
+        argument_spec=dict(
+            hostname=dict(required=True),
+            auth_token=dict(
+                required=False, default=os.environ.get(
+                    'TORY_AUTH_TOKEN', 'swordfish'
+                )
+            ),
+            tory_server=dict(
+                required=False, default=os.environ.get(
+                    'TORY_SERVER', 'http://localhost:9462/ansible/hosts'
+                )
+            ),
+        ),
+        supports_check_mode=True,
+    )
+
+    params = module.params
+    if 'hostname' not in params or \
+            HOSTNAME_RE.match(params['hostname']) is None:
+        module.fail_json(msg='invalid hostname')
+
+    if 'auth_token' not in params:
+        module.fail_json(msg='no auth_token provided')
+
+    tory_server = params.get('tory_server', os.environ.get('TORY_SERVER'))
+    url = urlparse.urlparse(tory_server)
+
+    if not tory_server:
+        module.fail_json(
+            msg='no tory server provided in env (as $TORY_SERVER) or '
+            'module args (as "tory_server")'
+        )
+
+    conn = httplib.HTTPConnection(
+        url.netloc.split(':')[0], int(url.port or 80)
+    )
+    conn.request(
+        'DELETE', '{}/{}'.format(url.path, params['hostname']),
+        '',
+        {
+            'Authorization': 'token {}'.format(params['auth_token'])
+        }
+    )
+    resp = conn.getresponse()
+
+    data = dict(status=resp.status, failed=False, changed=True)
+    if resp.status not in (204, 404, 200):
+        data['failed'] = True
+    if resp.status == 404:
+        data['changed'] = False
+
+    print json.dumps(data)
+    return 0
+
+
+class ToryRemoveHostModule(AnsibleModule):
+
+    def _check_invalid_arguments(self):
+        pass
+
+
+main()

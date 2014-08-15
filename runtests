@@ -1,0 +1,7 @@
+#!/bin/bash
+
+set -e
+
+source ansible/hacking/env-setup
+echo ./ansible/hacking/test-module -i 127.0.0.1, ./tory_add_host
+echo ./ansible/hacking/test-module -i 127.0.0.1, ./tory_remove_host

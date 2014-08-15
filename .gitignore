@@ -8,7 +8,6 @@ __pycache__/
 # Distribution / packaging
 .Python
 env/
-bin/
 build/
 develop-eggs/
 dist/
@@ -53,3 +52,4 @@ coverage.xml
 docs/_build/
 
 /ansible/
+/bin/json-server

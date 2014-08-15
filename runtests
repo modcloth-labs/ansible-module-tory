@@ -3,5 +3,20 @@
 set -e
 
 source ansible/hacking/env-setup
-echo ./ansible/hacking/test-module -i 127.0.0.1, ./tory_add_host
-echo ./ansible/hacking/test-module -i 127.0.0.1, ./tory_remove_host
+
+TEST_PORT=$(echo ${RANDOM}${RANDOM} | cut -b1-4)
+export TORY_SERVER=http://localhost:$TEST_PORT/ansible/hosts
+
+json-server -p $TEST_PORT -d $PWD/.fake-tory >> server.log 2>&1 &
+JSPID=$!
+
+trap "kill -9 $JSPID" EXIT INT TERM
+
+
+./ansible/hacking/test-module \
+    -m ./tory_add_host \
+    -a 'hostname=foo.example.com ip=10.10.1.1'
+
+./ansible/hacking/test-module \
+    -m ./tory_remove_host \
+    -a 'hostname=foo.example.com'

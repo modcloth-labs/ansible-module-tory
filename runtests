@@ -5,10 +5,15 @@ set -e
 
 source ansible/hacking/env-setup
 
+HERE="$(
+  python -c \
+    "import os.path;print os.path.dirname(os.path.abspath('$0'))"
+)"
+
 TEST_PORT=$(echo ${RANDOM}${RANDOM} | cut -b1-4)
 export TORY_SERVER=http://localhost:$TEST_PORT/ansible/hosts
 
-json-server -p $TEST_PORT -d $PWD/.fake-tory >> server.log 2>&1 &
+$HERE/bin/json-server -p $TEST_PORT -d $PWD/.fake-tory >> server.log 2>&1 &
 JSPID=$!
 sleep ${JSON_SERVER_STARTUP_SLEEP:-1}
 

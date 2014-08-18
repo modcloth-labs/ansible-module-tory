@@ -4,3 +4,4 @@ env:
   global:
   - DEBUG=1
 script: make test
+after_failure: cat server.log

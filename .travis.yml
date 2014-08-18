@@ -1,3 +1,6 @@
 ---
 language: python
+env:
+  global:
+  - DEBUG=1
 script: make test
